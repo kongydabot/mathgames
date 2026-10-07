@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<head>
+    <title>calculator.com</title>
+    <style>
+        .button {
+            position:absolute;
+            top: 260px;
+            left: 600px;
+            height: 100px;
+            width: 100px;
+            background-color: rgb(88, 52, 3);
+            border: none;
+            font-size: 30px;
+        }
+    </style>
+    <style>
+        .score {
+            position:absolute;
+            top: 10px;
+            left: 570px;
+            font-size: 50px;
+            background-color: grey;
+        }
+    </style>
+    <style>
+        .back {
+            position:absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 50px;
+            background-color: grey;
+        }
+    </style>
+    <script>
+        function updateScore() {
+            var scoreElement = document.querySelector('.score');
+            var currentScore = parseInt(scoreElement.textContent.split(': ')[1]);
+            scoreElement.textContent = 'score: ' + (currentScore + 1);
+        }
+    </script>
+    <style>
+        .text {
+            position:absolute;
+            top: 550px;
+            left: 550px;
+            font-size: 50px;
+        }
+    </style>
+</head>
+<body style="background-color: rgb(112, 68, 10)">
+    <button class="button" onclick="updateScore()">click me!</button>
+    <var class="score">score: 0</var>
+    <button class="back" onclick="window.location.href='unblocked.html'">back</button>
+    <p class="text">thats it  ._.</p>
+</body>
