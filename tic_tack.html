@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe vs AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti for win animations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Glassmorphism styling */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Custom glow effects */
+        .glow-x {
+            text-shadow: 0 0 18px rgba(239, 68, 68, 0.8);
+        }
+
+        .glow-o {
+            text-shadow: 0 0 18px rgba(59, 130, 246, 0.8);
+        }
+
+        .cell-glow-x {
+            box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.25), 0 0 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .cell-glow-o {
+            box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.25), 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Winning line highlight */
+        .winning-cell {
+            animation: pulse-win 1.2s infinite alternate;
+        }
+
+        @keyframes pulse-win {
+            0% { transform: scale(0.98); }
+            100% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 relative overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full max-w-xl flex justify-between items-center z-20 py-2">
+        <a href="unblocked.html" class="glass-button px-4 py-2 rounded-xl flex items-center gap-2 text-slate-200 hover:text-white font-semibold text-sm shadow-lg active:scale-95 transition-all">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Back</span>
+        </a>
+        <div class="flex items-center gap-2">
+            <div class="inline-flex rounded-xl bg-slate-900/80 p-1 border border-slate-800">
+                <button id="mode-pvp" onclick="setMode('pvp')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">
+                    2 Players
+                </button>
+                <button id="mode-ai" onclick="setMode('ai')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-md transition-all">
+                    VS AI
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="w-full max-w-md flex-1 flex flex-col justify-center items-center my-4 z-10">
+
+        <!-- Title -->
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-center bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-indigo-300 to-blue-400">
+            TIC TAC TOE
+        </h1>
+
+        <!-- Difficulty Selection Bar (AI Mode Only) -->
+        <div id="difficulty-container" class="w-full flex justify-center mb-5">
+            <div class="glass-card p-1 rounded-2xl flex gap-1 w-full text-center">
+                <button id="diff-easy" onclick="setDifficulty('easy')" class="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    Easy
+                </button>
+                <button id="diff-medium" onclick="setDifficulty('medium')" class="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600/80 text-white shadow">
+                    Medium
+                </button>
+                <button id="diff-unbeatable" onclick="setDifficulty('unbeatable')" class="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    Unbeatable
+                </button>
+            </div>
+        </div>
+
+        <!-- Score Board -->
+        <div class="w-full grid grid-cols-3 gap-3 mb-5">
+            <div class="glass-card rounded-2xl p-3 text-center border-l-4 border-l-red-500">
+                <div class="text-xs uppercase font-bold text-slate-400 tracking-wider">Player (X)</div>
+                <div id="score-x" class="text-2xl font-black text-red-400 mt-0.5">0</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3 text-center border-l-4 border-l-slate-500">
+                <div class="text-xs uppercase font-bold text-slate-400 tracking-wider">Ties</div>
+                <div id="score-ties" class="text-2xl font-black text-slate-300 mt-0.5">0</div>
+            </div>
+            <div id="score-o-card" class="glass-card rounded-2xl p-3 text-center border-l-4 border-l-blue-500">
+                <div id="score-o-label" class="text-xs uppercase font-bold text-slate-400 tracking-wider">AI (O)</div>
+                <div id="score-o" class="text-2xl font-black text-blue-400 mt-0.5">0</div>
+            </div>
+        </div>
+
+        <!-- Turn / Status Indicator -->
+        <div id="status-card" class="glass-card w-full py-2.5 px-4 rounded-xl mb-5 text-center flex justify-center items-center gap-2 border border-slate-700/50">
+            <span id="status-icon" class="text-red-400 font-extrabold text-lg glow-x">X</span>
+            <span id="status-text" class="font-semibold text-sm text-slate-200">Your Turn</span>
+        </div>
+
+        <!-- Game Board Grid -->
+        <div class="w-full aspect-square relative glass-card p-3 rounded-3xl border border-slate-700/60 shadow-2xl">
+            <div id="board" class="w-full h-full grid grid-cols-3 gap-3">
+                <!-- Cells generated via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="w-full flex gap-3 mt-6">
+            <button onclick="resetGame()" class="glass-button flex-1 py-3 px-4 rounded-xl font-bold text-sm text-slate-200 hover:text-white flex justify-center items-center gap-2 shadow-lg active:scale-95">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                Reset Board
+            </button>
+            <button onclick="clearScores()" class="glass-button py-3 px-4 rounded-xl font-bold text-xs text-slate-400 hover:text-red-400 flex justify-center items-center gap-1.5 shadow-lg active:scale-95">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Clear Scores
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-slate-500 text-xs text-center z-10 py-2">
+        Tactical Tic-Tac-Toe • Built for high performance
+    </footer>
+
+    <script>
+        // Game State Variables
+        let boardState = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X'; // Player is X, AI or Player 2 is O
+        let gameActive = true;
+        let gameMode = 'ai'; // 'ai' or 'pvp'
+        let difficulty = 'medium'; // 'easy', 'medium', 'unbeatable'
+        let isAiThinking = false;
+
+        // Scores
+        let scores = {
+            x: 0,
+            ties: 0,
+            o: 0
+        };
+
+        // Winning Combinations
+        const WINNING_COMBOS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initializeBoard();
+            updateStatusUI();
+            updateScoresUI();
+        });
+
+        // Initialize Board DOM
+        function initializeBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('button');
+                cell.className = `bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl font-black transition-all duration-200 transform active:scale-95 focus:outline-none`;
+                cell.setAttribute('data-cell-index', i);
+                cell.addEventListener('click', () => handleCellClick(i));
+                boardElement.appendChild(cell);
+            }
+        }
+
+        // Handle User Cell Click
+        function handleCellClick(index) {
+            if (boardState[index] !== '' || !gameActive || isAiThinking) return;
+
+            makeMove(index, currentPlayer);
+
+            if (gameActive && gameMode === 'ai' && currentPlayer === 'O') {
+                triggerAiMove();
+            }
+        }
+
+        // Make Move Logic
+        function makeMove(index, player) {
+            boardState[index] = player;
+            const cell = document.querySelector(`[data-cell-index="${index}"]`);
+            
+            if (player === 'X') {
+                cell.innerHTML = `<span class="text-red-500 glow-x animate-bounce-short">X</span>`;
+                cell.classList.add('cell-glow-x', 'border-red-500/40');
+            } else {
+                cell.innerHTML = `<span class="text-blue-500 glow-o animate-bounce-short">O</span>`;
+                cell.classList.add('cell-glow-o', 'border-blue-500/40');
+            }
+
+            checkResult();
+        }
+
+        // Check Win or Draw
+        function checkResult() {
+            let roundWon = false;
+            let winningCombo = null;
+
+            for (let i = 0; i < WINNING_COMBOS.length; i++) {
+                const [a, b, c] = WINNING_COMBOS[i];
+                if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+                    roundWon = true;
+                    winningCombo = WINNING_COMBOS[i];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                gameActive = false;
+                highlightWinningCells(winningCombo);
+                
+                if (currentPlayer === 'X') {
+                    scores.x++;
+                    setStatus(`Player X Wins!`, 'X');
+                    triggerConfetti();
+                } else {
+                    scores.o++;
+                    const winnerName = gameMode === 'ai' ? 'AI' : 'Player O';
+                    setStatus(`${winnerName} Wins!`, 'O');
+                    if (gameMode === 'pvp') triggerConfetti();
+                }
+                
+                updateScoresUI();
+                return;
+            }
+
+            // Check Draw
+            if (!boardState.includes('')) {
+                gameActive = false;
+                scores.ties++;
+                setStatus(`It's a Draw!`, 'TIE');
+                updateScoresUI();
+                return;
+            }
+
+            // Switch Player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatusUI();
+        }
+
+        // Highlight Winner Cells
+        function highlightWinningCells(combo) {
+            combo.forEach(idx => {
+                const cell = document.querySelector(`[data-cell-index="${idx}"]`);
+                cell.classList.add('winning-cell', 'bg-slate-800');
+            });
+        }
+
+        // Trigger AI Turn
+        function triggerAiMove() {
+            isAiThinking = true;
+            setStatus("AI is thinking...", "AI");
+
+            const delay = Math.floor(Math.random() * 300) + 300; // Realistic response delay
+
+            setTimeout(() => {
+                if (!gameActive) return;
+
+                let bestIndex;
+
+                if (difficulty === 'easy') {
+                    bestIndex = getRandomMove();
+                } else if (difficulty === 'medium') {
+                    // 50% chance Minimax, 50% Random
+                    bestIndex = Math.random() > 0.5 ? getMinimaxMove() : getRandomMove();
+                } else {
+                    // Unbeatable Minimax Algorithm
+                    bestIndex = getMinimaxMove();
+                }
+
+                isAiThinking = false;
+                if (bestIndex !== undefined && bestIndex !== -1) {
+                    makeMove(bestIndex, 'O');
+                }
+            }, delay);
+        }
+
+        // AI Strategy 1: Random Move
+        function getRandomMove() {
+            const emptyIndices = boardState
+                .map((val, idx) => val === '' ? idx : null)
+                .filter(val => val !== null);
+            
+            if (emptyIndices.length === 0) return -1;
+            return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        }
+
+        // AI Strategy 2: Minimax Algorithm for Unbeatable AI
+        function getMinimaxMove() {
+            let bestScore = -Infinity;
+            let move = -1;
+
+            for (let i = 0; i < 9; i++) {
+                if (boardState[i] === '') {
+                    boardState[i] = 'O';
+                    let score = minimax(boardState, 0, false);
+                    boardState[i] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
+            }
+            return move;
+        }
+
+        function minimax(board, depth, isMaximizing) {
+            let result = evaluateBoard(board);
+            if (result !== null) {
+                if (result === 'O') return 10 - depth;
+                if (result === 'X') return depth - 10;
+                if (result === 'TIE') return 0;
+            }
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        let score = minimax(board, depth + 1, false);
+                        board[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        let score = minimax(board, depth + 1, true);
+                        board[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function evaluateBoard(board) {
+            for (let combo of WINNING_COMBOS) {
+                const [a, b, c] = combo;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return board[a];
+                }
+            }
+            if (!board.includes('')) return 'TIE';
+            return null;
+        }
+
+        // Status & UI Helpers
+        function setStatus(text, type) {
+            const statusText = document.getElementById('status-text');
+            const statusIcon = document.getElementById('status-icon');
+            
+            statusText.innerText = text;
+            
+            if (type === 'X') {
+                statusIcon.className = "text-red-400 font-extrabold text-lg glow-x";
+                statusIcon.innerText = "X";
+            } else if (type === 'O') {
+                statusIcon.className = "text-blue-400 font-extrabold text-lg glow-o";
+                statusIcon.innerText = "O";
+            } else if (type === 'AI') {
+                statusIcon.className = "text-indigo-400 font-extrabold text-lg animate-spin";
+                statusIcon.innerText = "⚡";
+            } else {
+                statusIcon.className = "text-slate-400 font-extrabold text-lg";
+                statusIcon.innerText = "🤝";
+            }
+        }
+
+        function updateStatusUI() {
+            if (gameMode === 'ai') {
+                if (currentPlayer === 'X') {
+                    setStatus("Your Turn", 'X');
+                } else {
+                    setStatus("AI Turn", 'O');
+                }
+            } else {
+                setStatus(`Player ${currentPlayer}'s Turn`, currentPlayer);
+            }
+        }
+
+        function updateScoresUI() {
+            document.getElementById('score-x').innerText = scores.x;
+            document.getElementById('score-ties').innerText = scores.ties;
+            document.getElementById('score-o').innerText = scores.o;
+        }
+
+        // Mode Switching
+        function setMode(mode) {
+            gameMode = mode;
+            const pvpBtn = document.getElementById('mode-pvp');
+            const aiBtn = document.getElementById('mode-ai');
+            const diffContainer = document.getElementById('difficulty-container');
+            const scoreOLabel = document.getElementById('score-o-label');
+
+            if (mode === 'pvp') {
+                pvpBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-md transition-all";
+                aiBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all";
+                diffContainer.classList.add('hidden');
+                scoreOLabel.innerText = "Player (O)";
+            } else {
+                aiBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-md transition-all";
+                pvpBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all";
+                diffContainer.classList.remove('hidden');
+                scoreOLabel.innerText = "AI (O)";
+            }
+            resetGame();
+        }
+
+        // Difficulty Setting
+        function setDifficulty(diff) {
+            difficulty = diff;
+            ['easy', 'medium', 'unbeatable'].forEach(d => {
+                const btn = document.getElementById(`diff-${d}`);
+                if (d === diff) {
+                    btn.className = "flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600/80 text-white shadow";
+                } else {
+                    btn.className = "flex-1 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white";
+                }
+            });
+            resetGame();
+        }
+
+        // Reset Game Board
+        function resetGame() {
+            boardState = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            isAiThinking = false;
+            
+            initializeBoard();
+            updateStatusUI();
+        }
+
+        // Clear All Scores
+        function clearScores() {
+            scores = { x: 0, ties: 0, o: 0 };
+            updateScoresUI();
+            resetGame();
+        }
+
+        // Confetti Win Effect
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
